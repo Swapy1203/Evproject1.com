@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Methods</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='user/payment_methods.css') }}">
+</head>
+<body>
+
+  {% include 'components/user_navbar.html' %}
+
+  <div class="d-flex" id="layout">
+    <div id="sidebar">
+      {% include 'components/user_sidebar.html' %}
+    </div>
+
+    <main class="flex-grow-1 p-4">
+      <h4 class="mb-4">Payment Methods</h4>
+
+      <!-- Add Method -->
+      <div class="card mb-4">
+        <div class="card-header fw-bold">Add Payment Method</div>
+        <div class="card-body">
+          <form id="addMethodForm" method="POST" action="/user/payment-methods/add">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Type</label>
+                <select class="form-select" name="method_type" required>
+                  <option value="">Select</option>
+                  <option value="CARD">Card</option>
+                  <option value="UPI">UPI</option>
+                  <option value="WALLET">Wallet</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Provider</label>
+                <input type="text" class="form-control" name="provider" placeholder="Visa, PhonePe, Paytm">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Identifier (masked)</label>
+                <input type="text" class="form-control" name="identifier_mask" placeholder="**** 1234 / swapnil@upi" required>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Nickname</label>
+                <input type="text" class="form-control" name="nickname" placeholder="Primary Card">
+              </div>
+              <div class="col-12 d-flex align-items-center gap-2">
+                <input type="checkbox" class="form-check-input" id="is_default" name="is_default">
+                <label class="form-check-label" for="is_default">Set as default</label>
+              </div>
+            </div>
+            <div class="mt-3">
+              <button class="btn btn-primary">Add Method</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Saved Methods -->
+      <div class="card">
+        <div class="card-header fw-bold">Saved Methods</div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Type</th>
+                <th>Provider</th>
+                <th>Identifier</th>
+                <th>Nickname</th>
+                <th>Default</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in methods %}
+              <tr>
+                <td>
+                  <span class="badge {% if m.method_type=='CARD' %}bg-primary{% elif m.method_type=='UPI' %}bg-info{% else %}bg-secondary{% endif %}">
+                    {{ m.method_type }}
+                  </span>
+                </td>
+                <td>{{ m.provider or '-' }}</td>
+                <td>{{ m.identifier_mask }}</td>
+                <td>{{ m.nickname or '-' }}</td>
+                <td>
+                  {% if m.is_default %}
+                    <span class="badge bg-success">Default</span>
+                  {% else %}
+                    <form method="POST" action="/user/payment-methods/default/{{ m.id }}">
+                      <button class="btn btn-sm btn-outline-success">Set default</button>
+                    </form>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <form method="POST" action="/user/payment-methods/delete/{{ m.id }}" onsubmit="return confirm('Remove this method?')">
+                    <button class="btn btn-sm btn-outline-danger">
+                      <i class="bi bi-trash"></i> Remove
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+              {% if methods|length == 0 %}
+              <tr>
+                <td colspan="6" class="text-center text-muted py-4">No payment methods added yet.</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+          document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('addMethodForm');
+        if (!form) return;
+
+        form.addEventListener('submit', (e) => {
+          const type = form.method_type.value;
+          const idMask = form.identifier_mask.value.trim();
+
+          if (!type || !idMask) {
+            e.preventDefault();
+            alert('Please select a type and enter a masked identifier.');
+          }
+        });
+      });
+
+  </script>
+</body>
+</html>

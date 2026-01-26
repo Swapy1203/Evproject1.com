@@ -1,0 +1,33 @@
+/* Section Title */
+.section-title {
+  font-weight: 600;
+  color: #0d6efd;
+}
+
+/* Card Styling */
+.card {
+  border-radius: 8px;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Form Styling */
+.form-label {
+  font-weight: 500;
+  color: #333;
+}
+
+.form-control, .form-select {
+  border-radius: 6px;
+}
+
+.btn-primary {
+  background-color: #0d6efd;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #0b5ed7;
+}

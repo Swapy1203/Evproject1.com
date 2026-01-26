@@ -90,3 +90,19 @@ function displayErrorMessage(inputName, message) {
     const errorContainer = document.querySelector(`#${inputName} + .form__input-error-message`);
     errorContainer.textContent = message;
 }
+document.addEventListener("DOMContentLoaded", () => {
+    const loginForm = document.getElementById("login");
+    const createAccountForm = document.getElementById("createAccount");
+
+    document.getElementById("createAccountLink").addEventListener("click", e => {
+      e.preventDefault();
+      loginForm.classList.add("form--hidden");
+      createAccountForm.classList.remove("form--hidden");
+    });
+
+    document.getElementById("loginLink").addEventListener("click", e => {
+      e.preventDefault();
+      createAccountForm.classList.add("form--hidden");
+      loginForm.classList.remove("form--hidden");
+    });
+  });

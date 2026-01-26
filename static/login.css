@@ -89,17 +89,13 @@ body {
 }
 
 .container {
-    padding-top: 50px;
-    width: 300px;
-    max-width: 400px;
-    margin: 1rem;
-    margin-top: 100px;
-    margin-left: 550px;
-    margin-bottom: 50px;
-    padding: 2rem;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
-    border-radius: var(--border-radius);
-    background: #ffffff;
+  max-width: 480px;        /* increased a little (was ~400px) */
+  margin: 70px auto;
+  background: #fff;
+  padding: 35px;           /* slightly more padding */
+  border-radius: 10px;
+  box-shadow: 0px 6px 20px rgba(0,0,0,0.2);
+   background: #ffffff;
 }
 
 .container,
@@ -144,6 +140,8 @@ body {
 
 .form__input {
     display: block;
+    height: 50px;            /* a bit taller */
+    font-size: 15px;
     width: 100%;
     padding: 0.75rem;
     box-sizing: border-box;

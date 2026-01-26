@@ -1,0 +1,87 @@
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f0f4f8;
+  margin: 0;
+  padding: 0;
+}
+
+.booking-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 30px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.booking-title {
+  text-align: center;
+  font-size: 24px;
+  margin-bottom: 25px;
+  color: #333;
+}
+
+.station-card {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-left: 4px solid #28a745;
+  margin-bottom: 20px;
+  border-radius: 6px;
+}
+
+.station-card h3 {
+  margin-top: 0;
+  color: #28a745;
+}
+
+.form-row {
+  margin-bottom: 15px;
+}
+
+.form-row label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #444;
+}
+
+input[type="date"],
+input[type="time"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 25px;
+}
+
+.btn-confirm,
+.btn-back {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  text-decoration: none;
+  color: white;
+}
+
+.btn-confirm {
+  background-color: #28a745;
+}
+
+.btn-back {
+  background-color: #6c757d;
+}
+select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}

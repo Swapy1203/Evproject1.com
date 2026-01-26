@@ -69,7 +69,10 @@ nav ul li a:hover{
 
 
 
-
+body {
+    /* overflow-x: hidden; */
+  }
+  
   #sidebar-wrapper {
     min-height: 95vh;
     max-height: 95vh;

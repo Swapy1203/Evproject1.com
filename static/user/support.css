@@ -1,0 +1,44 @@
+/* Section Title */
+.section-title {
+  font-weight: 600;
+  color: #0d6efd;
+}
+
+/* Card Styling */
+.card {
+  border-radius: 8px;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-title {
+  font-size: 18px;
+  margin-bottom: 1rem;
+}
+
+/* FAQ List */
+.list-group-item {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Form Styling */
+.form-label {
+  font-weight: 500;
+  color: #333;
+}
+
+.form-control {
+  border-radius: 6px;
+}
+
+.btn-primary {
+  background-color: #0d6efd;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #0b5ed7;
+}

@@ -1,154 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.11.4/css/jquery.dataTables.min.css">  
+  <meta charset="UTF-8">
+  <title>Manage Stations</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/main.css">
   <link rel="stylesheet" href="/static/admin/Manage-station.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel=" icon" href="/static/temp/assets/images/icon.ico"/>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage station</title>
-
-    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
-     <!-- <link rel="stylesheet" href="user-login dashboard.js"> -->
 </head>
-
-<!-- HEADER SECTION -->
-
-
-<header>
-  <a href="{{ url_for('home') }}" class="logo"> <img src="/static/pic/logo.png" alt="logo"> </a>
-  <nav>
-    <ul>
-      <li><a href="{{ url_for('home') }}">Home</a></li>
-      <!-- <li><a href="{{ url_for('find_your_charger') }}">Find your charger</a></li> -->
-      <li><a href="{{ url_for('about') }}">About</a></li>
-      <li><a href="{{ url_for('contact_us') }}">Contact us</a></li>
-    </ul>
-  </nav>
-  
-  
-</header>
-
 <body>
+  {% include 'components/admin_navbar.html' %}
 
-<!-- BODY SECTION -->
-
-<div class="d-flex toggled" id="wrapper">
-
-<!-- Sidebar -->
-<div class="bg-light border-right" id="sidebar-wrapper">
-  <div class="text-right">
-    <button class="sidebar-toggler" id="sidebar-toggle-onSidebar">
-      <span class="icon-bar top-bar"></span>
-      <span class="icon-bar middle-bar"></span>
-   
-    </button>
-  </div>
-
-  <!-- <div class="sidebar-heading">Start Bootstrap </div> -->
-  <div class="list-group list-group-flush">
-    <a href="/admin-home" class="list-group-item list-group-item-action bg-light">Dashboard</a>
-    <a href="/user-list" class="list-group-item list-group-item-action bg-light">Manage users</a>
-    <a href="/Manage_station" class="list-group-item list-group-item-action bg-light">Manage Station</a>
-    <a href="/view_booking" class="list-group-item list-group-item-action bg-light">view booking</a>
-    <a href="/view_feedback" class="list-group-item list-group-item-action bg-light">view feedback</a>
-    <a href="/logout" class="list-group-item list-group-item-action bg-light">logout</a>
-
-   
-    
-  </div>
-</div>
-<div id="sidebar-empty-space" class="empty-space-sidebar"></div>
-<!-- /#sidebar-wrapper -->
-
-<!-- Page Content -->
-<div id="page-content-wrapper">
-
-  <nav class="navbar navbar-light scroll scrolling-navbar py-2">
-    <!-- <button class="sidebar-toggler" id="sidebar-toggle-onNavbar"> -->
-      <!-- <span class="icon-bar top-bar"></span> -->
-      <!-- <span class="icon-bar middle-bar"></span> -->
-      <!-- <span class="icon-bar bottom-bar"></span> -->
-    </button>
-
-    <!-- <div class="container scroll d-flex flex-row justify-content-center px-0">
-      <a class="nav-link nav-link-secondary" href="https://www.schermabergamo.it/prossime-gare/">Prossime gare
-        <div class="navbar-underline"></div></a>
-      <a class="nav-link nav-link-secondary" href="https://www.schermabergamo.it/calendari-gare/">Calendari gare
-        <div class="navbar-underline"></div></a>
-      <a class="nav-link nav-link-secondary" href="https://www.adfencing.it/schermabergamo/login.php" target="_blank" rel="author noopener">Gestionale
-        <div class="navbar-underline"></div></a>
+  <div class="d-flex" id="layout">
+    <div id="sidebar">
+      {% include 'components/sidebar_admin.html' %}
     </div>
--->
-  </nav>
+    <main class="page" id="main">
+      <h2 class="section-title">Manage Stations</h2>
 
+      <!-- Add Station Button -->
+      <div class="mb-3 text-end">
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addStationModal">+ Add Station</button>
+      </div>
 
-  <form action="" method="get"><table id="myTable" class="display" width="600" border="1" class="table table-active">
-    <tr>
-      <th scope="col">SL.NO</th>
-      <th scope="col">STATION NAME</th>
-      <th scope="col">ADDRESS</th>
-       <th scope="col">CITY</th>
-       <th scope="col">CHARGE TYPE</th>
-       <th scope="col">AVAILABLE PORTS</th>
-       <th scope="col">STATUS</th>
-     <!-- <th scope="col">POST</th>
-      <th scope="col">DISTRICT</th>
-      <th scope="col">STATE</th>
-      <th scope="col">EMAIL</th>
-      <th scope="col">PHONE</th> -->
-      </tr>
-      {% for i in data %}
-    <tr>
-      <td>{{ loop.index }}</td>
-      <td>{{ i.station_name }}</td>
-      <td>{{ i.address }}</td>
-      <td>{{ i.city }}</td>
-      <td>{{ i.charger_type }}</td>
-      <td>{{ i.available_ports }}</td>
-      <td>{{ i.status }}</td>
-      <td><p><a href="/adm_delete_station/{{ i.station_name }}" class="btn btn-dark">Remove</button></td>
-      <!--       <input type="Remove" value="Send">  -->
-        <!-- <td>&nbsp;{{ i.area }}</td> -->
-     <!-- <td>&nbsp;{{ i.city }}</td>
-      <td>{{ i.post }}</td>
-      <td>&nbsp;{{ i.district }}</td>
-      <td>&nbsp;{{ i.state }}</td>
-      <td>{{ i.email }}</td>
-      <td>{{ i.phone }}</td> -->
-      </tr> 
-      {%  endfor %}
-  </table>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.4/js/jquery.dataTables.min.js"></script>
-<script>
-$(document).ready(function() {
-  $('#myTable').DataTable({
-  "paging": false, // hide pagination
-  "searching": false // hide search bar
-  });
-});
-</script>
-  </form>
-
-</body>
-
-
-<!-- FOOTER SECTION -->
-
-
-
-
-    <footer>
-        <div class="footer-content">
-            <h3>footer</h3>
-            <p>&copy; 2023 EV Charging Station Finder. All rights reserved.</p>
+      <!-- Stations Table -->
+      <div class="card">
+        <div class="card-header bg-success text-white">Stations List</div>
+        <div class="card-body">
+          <table class="table table-hover">
+            <thead class="table-dark">
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Address</th>
+                <th>City</th>
+                <th>Charger Type</th>
+                <th>Slots</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for station in stations %}
+              <tr>
+                <td>{{ station.id }}</td>
+                <td>{{ station.station_name }}</td>
+                <td>{{ station.address }}</td>
+                <td>{{ station.city }}</td>
+                <td>{{ station.charger_type }}</td>
+                <td>{{ station.available_ports }}</td>
+                <td>
+                  {% if station.status == 'Active' %}
+                    <span class="badge bg-success">Active</span>
+                  {% else %}
+                    <span class="badge bg-danger">Inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editStationModal{{ station.id }}">Edit</button>
+                  <form action="/delete-station/{{ station.id }}" method="POST" style="display:inline;">
+                    <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this station?')">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-    </footer>
+      </div>
 
+      <!-- Edit Modals (placed outside the table) -->
+      {% for station in stations %}
+      <div class="modal fade" id="editStationModal{{ station.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <form action="/edit-station/{{ station.id }}" method="POST" class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Edit Station</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <input type="text" name="station_name" class="form-control mb-2" value="{{ station.station_name }}" required>
+              <input type="text" name="address" class="form-control mb-2" value="{{ station.address }}">
+              <input type="text" name="city" class="form-control mb-2" value="{{ station.city }}" required>
+              <input type="text" name="charger_type" class="form-control mb-2" value="{{ station.charger_type }}" required>
+              <input type="number" name="available_ports" class="form-control mb-2" value="{{ station.available_ports }}" required>
+              <select name="status" class="form-select">
+                <option value="Active" {% if station.status == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Inactive" {% if station.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+              </select>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Add Modal -->
+      <div class="modal fade" id="addStationModal" tabindex="-1">
+        <div class="modal-dialog">
+          <form action="/add-station" method="POST" class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Add New Station</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <input type="text" name="station_name" class="form-control mb-2" placeholder="Station Name" required>
+              <input type="text" name="address" class="form-control mb-2" placeholder="Address">
+              <input type="text" name="city" class="form-control mb-2" placeholder="City" required>
+              <select name="charger_type" class="form-select" required>
+          <!-- Simple static list to keep it easy -->
+                <option value="">-- Select Charger Type --</option>
+                <option value="AC Level 1 Charging">AC Level 1 Charging</option>
+                <option value="AC Level 2 Charging">AC Level 2 Charging</option>
+                <option value="DC Fast Charging">DC Fast Charging</option>
+              </select>
+              <input type="number" name="available_ports" class="form-control mb-2" placeholder="Slots" required>
+              <input type="text" name="latitude" class="form-control mb-2" placeholder="Latitude">
+              <input type="text" name="longitude" class="form-control mb-2" placeholder="Longitude">
+
+              <select name="status" class="form-select">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-success">Add Station</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  {% include 'components/footer.html' %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>

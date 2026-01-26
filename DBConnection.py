@@ -1,37 +1,42 @@
 import mysql.connector
 
 
-mydb =mysql.connector.connect(host="localhost", user="root", passwd="admin")
+mydb =mysql.connector.connect(host="localhost", user="root")
 
 class Db:
     def __init__(self):
         self.cnx = mysql.connector.connect(
-            host="localhost",
+            host="127.0.0.1",
             user="root",
-            password="admin",
+            password="",         # update if you have a password
             database="ev_db"
-            )
-        self.cur = self.cnx.cursor(dictionary=True,buffered=True)
+        )
+        # dictionary=True so you get dict rows in select/selectOne
+        self.cursor = self.cnx.cursor(dictionary=True)
 
-    def select(self, q, params=None):
-        self.cur.execute(q, params)
-        return self.cur.fetchall()
 
-    def selectOne(self, q, params=None):
-        self.cur.execute(q, params)
-        return self.cur.fetchone()
+    def select(self, sql, values=None):
+        self.cursor.execute(sql, values or ())
+        return self.cursor.fetchall()
 
-    def insert(self, q, params=None):
-        self.cur.execute(q, params)
+    def selectOne(self, sql, values=None):
+        self.cursor.execute(sql, values or ())
+        return self.cursor.fetchone()
+
+    def insert(self, sql, values=None):
+        self.cursor.execute(sql, values or ())
         self.cnx.commit()
-        return self.cur.lastrowid
+        return self.cursor.lastrowid
 
-    def update(self, q, params=None):
-        self.cur.execute(q, params)
+    def update(self, sql, values=None):
+        cursor = self.cnx.cursor()   # ✅ no dictionary needed for update
+        cursor.execute(sql, values or ())
         self.cnx.commit()
-        return self.cur.rowcount
+        rowcount = cursor.rowcount   # ✅ number of rows affected
+        cursor.close()
+        return cursor.rowcount              # ✅ return so you can debug
 
-    def delete(self, q, params=None):
-        self.cur.execute(q, params)
+    def delete(self, sql, values=None):
+        self.cursor.execute(sql, values or ())
         self.cnx.commit()
-        return self.cur.rowcount
+        return self.cursor.rowcount

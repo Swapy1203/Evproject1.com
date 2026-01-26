@@ -1,0 +1,20 @@
+body {
+  background-color: #f5f7fa;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+#layout {
+  min-height: 100vh;
+}
+
+.card .card-header {
+  background: #fff;
+}
+
+.table thead th {
+  font-weight: 600;
+}
+
+.badge {
+  font-size: 0.8rem;
+}

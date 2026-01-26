@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Find Charger | EV Charging Station Finder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='find-charger.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+</head>
+<body>
+  {% include 'components/navbar.html' %}
+
+  <!-- Header / Navbar -->
+  
+
+  <!-- Main Content -->
+  <main class="container">
+    <h1>Find Nearby EV Charging Stations</h1>
+    <p>Explore charging stations around your location.</p>
+
+    <!-- Simple Google Map Embed -->
+    <iframe
+       src="https://www.google.com/maps/embed?pb=!1m16!1m12!1m3!1d122805.46974811808!2d74.43013480372385!3d15.873883485659345!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!2m1!1scharging%20station%20belgaum!5e0!3m2!1sen!2sin!4v1764167645962!5m2!1sen!2sin" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+      width="100%" height="500" style="border:0;" allowfullscreen="" loading="lazy">
+    </iframe>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <h3>EV Charging Station Finder</h3>
+      
+    </div>
+  </footer>
+
+</body>
+</html>

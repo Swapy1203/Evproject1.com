@@ -4,7 +4,28 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from flask import Flask, render_template, url_for, request, redirect, session, jsonify, flash
+from flask import Blueprint
 from DBConnection import Db
+
+# app.py (top)
+from DBConnection import Db
+from flask import Flask, render_template, jsonify
+from datetime import datetime
+from flask import jsonify
+import os
+app = Flask(__name__)
+
+
+def get_cursor():
+    """
+    Opens a new DB connection via Db(), returns (cursor, connection).
+    Closes only the cursor in routes; connection is owned by Db().
+    """
+    db = Db()                 # Ensure Db() in DBConnection.py sets: self.cnx = mysql.connector.connect(...)
+    cnx = db.cnx
+    cursor = cnx.cursor()
+    return cursor, cnx
+
 
 app = Flask(__name__)
 app.secret_key="123"
@@ -16,12 +37,19 @@ app.secret_key="123"
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    db = Db()
+    settings = db.selectOne("SELECT * FROM homepage_settings LIMIT 1")
+    return render_template('index.html', settings=settings)
+
 
 
 @app.route('/find_your_charger')
 def find_your_charger():
-    return render_template('find_your_charger.html')
+    db = Db()
+    cities = db.select("SELECT DISTINCT city FROM charging_station_list WHERE status='Active'")
+    charger_types = db.select("SELECT DISTINCT charger_type FROM charging_station_list WHERE status='Active'")
+    return render_template("user_find_your_charger.htm", cities=cities, charger_types=charger_types)
+
 
 @app.route('/about')
 def about():
@@ -117,6 +145,7 @@ def login():
             elif ss['usertype'] == 'user':
                 session['user_type'] = 'user'
                 session['uid'] = ss['login_id']
+                session['user_id'] = ss['login_id']  # ✅ add this for profile route
                 return redirect('/user-dashboard')
             else:
                 return '''<script>alert('user not found');window.location="/login"</script>'''
@@ -146,29 +175,28 @@ def register():
         password = request.form['password']
         confirmPassword = request.form['confirmPassword']
 
-        # Perform form validation
-        if username.strip() == '':
-            return redirect(url_for('register', error='Please enter a username', form_id='createAccount'))
-
-        if email.strip() == '':
-            return redirect(url_for('register', error='Please enter an email address', form_id='createAccount'))
-
-        if password.strip() == '':
-            return redirect(url_for('register', error='Please enter a password', form_id='createAccount'))
-
-        if confirmPassword.strip() == '':
-            return redirect(url_for('register', error='Please confirm the password', form_id='createAccount'))
-
         if password != confirmPassword:
             return redirect(url_for('register', error='Passwords do not match', form_id='createAccount'))
 
         db = Db()
-        qry = db.insert("INSERT INTO login (username,  password, usertype) VALUES (%s, %s, 'user')", (username,  password))
+
+        # Insert into login and get the new login_id
+        login_id = db.insert(
+            "INSERT INTO login (username, password, usertype) VALUES (%s, %s, 'user')",
+            (username, password)
+        )
+
+        # Insert into user table with FK to login_id
+        db.insert(
+            "INSERT INTO user (name, email, joined, login_id) VALUES (%s, %s, NOW(), %s)",
+            (username, email, login_id)
+        )
 
         return '<script>alert("User registered"); window.location.href="/login";</script>'
     else:
-        error = request.args.get('error')  # Get the error message from the URL parameters
-        return render_template("login.html", error=error , form_id='createAccount')
+        error = request.args.get('error')
+        return render_template("login.html", error=error, form_id='createAccount')
+
 
 
 
@@ -189,17 +217,17 @@ def admin_home():
         return redirect('/')
 
 
-
+'''
 @app.route('/Manage_station')
 def Manage_station():
     print('session ', session)
     if session['user_type'] == 'admin':
         db=Db()
         qry=db.select("select station_id, station_name, address, city, charger_type, available_ports, status from admin_charging_station_list")
-        return render_template("admin/Manage_station.html",data=qry)
+        return render_template("admin/Manage_station.html",stations=qry)
     else:
         return redirect('/')
-
+'''
 # =============================contact_us
 @app.route('/view_feedback')
 def view_feedback():
@@ -244,13 +272,14 @@ def adm_delete_feedback(feedback):
 
 @app.route('/user-list')
 def user_list():
-    print('session ', session)
     if session['user_type'] == 'admin':
-        db=Db()
-        qry = db.select("SELECT * FROM user")
-        return render_template("admin/user-list.html",data=qry)
+        db = Db()
+        users = db.select("SELECT user_id, name, email, joined FROM `user` ORDER BY user_id DESC")
+        return render_template("admin/user-list.html", users=users)
     else:
         return redirect('/')
+
+
 
 
 # ==================delete user===========
@@ -266,14 +295,27 @@ def adm_delete_user(user_id):
 # ==============view booking=========================
 
 @app.route('/view_booking')
-def view_booking():
-    print('session ', session)
-    if session['user_type'] == 'admin':
-        db=Db()
-        bookings = db.select("select Booking_id	, Booking_date, Time_from, Time_to, City, Station_name, Available_ports, login_id  from booking  order by Booking_date desc;")
-        return render_template('admin/view_booking.html', bookings=bookings)
-    else:
+def admin_view_booking():
+    if session.get('user_type') != 'admin':
         return redirect('/')
+
+    db = Db()
+    bookings = db.select("""
+        SELECT b.booking_id,
+               s.station_name,
+               u.name AS user_name,
+               b.booking_date,
+               b.status
+        FROM booking b
+        LEFT JOIN charging_station_list s ON b.station_id = s.id
+        LEFT JOIN user u ON b.login_id = u.login_id
+        ORDER BY b.booking_date DESC
+    """)
+
+    return render_template("admin/view_booking.html", bookings=bookings)
+
+
+
 
 # ===========delete booking
 
@@ -293,7 +335,7 @@ def adm_delete_booking(Booking_id):
 
 # -----------
 
-@app.route('/user-dashboard')
+'''@app.route('/user-dashboard')
 def user_dashboard():
     if 'user_type' in session and session['user_type'] == "user":
         username = session['username'] # get the username from the session
@@ -303,7 +345,7 @@ def user_dashboard():
         return render_template("user/user-login-dashboard.html", bookings=bookings, username=username)
     else:
         return redirect('/')
-
+'''
 
 @app.route('/usr_delete_booking/<int:booking_id>')
 def usr_delete_booking(booking_id):
@@ -319,42 +361,50 @@ def usr_delete_booking(booking_id):
 
 
 
-# TODO: Fix the DB (FK, table etc) and frontend field and backend Field
+'''
+@app.route('/user-profile', methods=['GET', 'POST'])
+def user_profile():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm-password')
 
-# @app.route('/user-profile', methods=['GET', 'POST'])
-# def user_profile():
-#     if request.method == 'POST':
-#         name = request.form['name']
-#         email = request.form['email']
-#         password = request.form['password']
-#         confirm_password = request.form['confirm-password']
-        
-#         if password != confirm_password:
-#             return redirect(url_for('user_profile', error='Passwords do not match'))
-        
-#         db = Db()
-#         qry = db.update("UPDATE login SET name = %s, email = %s, password = %s WHERE username = %s", (name, email, password, session['username']))  # Assuming you have stored the logged-in user's username in the session
-#         return '<script>alert("Account details updated"); window.location.href="/user-profile";</script>'
+        # TODO: update user details in DB here
+        # Example:
+        # cursor = mydb.cursor()
+        # cursor.execute("UPDATE user SET name=%s, email=%s, password=%s WHERE id=%s",
+        #                (name, email, password, session['user_id']))
+        # mydb.commit()
 
-#     error = request.args.get('error')
-#     return render_template('user/user-profile.html', error=error)
+        flash("Profile updated successfully!", "success")
+        return redirect(url_for('user_profile'))
 
-
+    return render_template('user/user-profile.html')
+'''
 
 
 @app.route('/user_find_your_charger', methods=['GET', 'POST'])
 def user_find_your_charger():
     if 'user_type' in session and session['user_type'] == 'user':
+        db = Db()
+        cities = db.select("SELECT DISTINCT city FROM charging_station_list WHERE status='Active'")
+        charger_types = db.select("SELECT DISTINCT charger_type FROM charging_station_list WHERE status='Active'")
+
         if request.method == 'POST':
             city = request.form.get('City')
             charger_type = request.form.get('Charger_type')
-            db = Db()
-            qry = db.select("select Station_name, Address, Charger_type, Available_ports from admin_charging_station_list where City = %s and Charger_type = %s", (city, charger_type))
-            return render_template('user/station_search.html', data=qry)       
-        else:
-            return render_template('user/user_find_your_charger.html')
+            qry = db.select("""
+                SELECT id, station_name, address, city, charger_type, available_ports
+                FROM charging_station_list
+                WHERE city=%s AND charger_type=%s AND status='Active'
+            """, (city, charger_type))
+            return render_template('user/station_search.html', data=qry, City=city, Charger_type=charger_type)
+
+        return render_template('user/user_find_your_charger.html', cities=cities, charger_types=charger_types)
     else:
         return redirect('/')
+
 
 
 
@@ -385,19 +435,35 @@ def station_search():
         return redirect('/')
 
 # ==============from station_search to booking page====================
-@app.route('/booking', methods=['GET', 'POST'])
-def booking():
-    if request.method == 'POST':
-        Station_name = request.form['Station_name']
-        City = request.form['City']
-        Available_ports = request.form['Available_ports']
-        return redirect(url_for('booking_form',  Station_name=Station_name, City=City, Available_ports=Available_ports))
-    else:
-        # handle GET request to display the form
-        Station_name = request.args.get('Station_name')
-        City = request.args.get('City')
-        Available_ports = request.args.get('Available_ports')
-        return redirect(url_for('booking_form', Station_name=Station_name, City=City, Available_ports=Available_ports))
+@app.route('/booking/<int:id>', methods=['GET', 'POST'])
+def booking(id):
+    db = Db()
+
+    if request.method == 'GET':
+        station = db.selectOne("""
+            SELECT id, station_name, city, available_ports
+            FROM charging_station_list
+            WHERE id = %s
+        """, (id,))
+        return render_template('user/booking_form.html', station=station)
+
+    # POST
+    login_id = session['uid']
+    booking_date = request.form['Booking_date']
+    time_from = request.form['Time_from']
+    time_to = request.form['Time_to']
+    charger_type = request.form['charger_type']  # NEW
+
+    db.insert("""
+        INSERT INTO booking (station_id, login_id, Booking_date, Time_from, Time_to, charger_type, Status)
+        VALUES (%s, %s, %s, %s, %s, %s, 'Pending')
+    """, (id, login_id, booking_date, time_from, time_to, charger_type))
+
+    return redirect(url_for('user_dashboard'))
+
+
+
+
 
 @app.route('/booking-form', methods=['GET'])
 def booking_form():
@@ -405,7 +471,7 @@ def booking_form():
     available_ports = request.args.get('Available_ports')
     station_name = request.args.get('Station_name')
     db = Db()
-    station_data = db.select("select * from admin_charging_station_list where Station_name = %s", (station_name,))
+    station_data = db.select("select * from charging_station_list where Station_name = %s", (station_name,))
     session['station_data'] = station_data[0] if station_data else None
     if 'station_data' in session and session['station_data']:
         return render_template('/user/booking_form.html', city=city, available_ports=available_ports)
@@ -437,7 +503,7 @@ def book():
         # insert the booking data into the MySQL table
         sql = "insert into booking (Station_name, City, Available_ports, Booking_date, Time_from, Time_to, Created_id, login_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
         booking_id = db.insert(sql, (station_name, city, available_ports, booking_date, time_from, time_to, created_at, login_id))
-
+         
         # redirect the user to their dashboard
         return render_template("user/user-login-dashboard.html", data={
             'Station_name': station_name,
@@ -452,6 +518,350 @@ def book():
     else:
         return redirect('/booking-form')
 
+@app.route('/admin-charts')
+def admin_charts():
+    if session.get('user_type') != 'admin':
+        return redirect('/')
+
+    db = Db()
+
+    # Bookings per Station
+    rows_station = db.select("""
+    SELECT b.station_id,
+           s.station_name,
+           COUNT(*) AS booking_count
+    FROM booking b
+    JOIN charging_station_list s ON b.station_id = s.id
+    GROUP BY b.station_id, s.station_name
+""")
+
+
+    station_labels = [r['station_name'] for r in rows_station]
+    station_data = [r['booking_count'] for r in rows_station]
+
+    # Bookings per Day
+    rows_daily = db.select("""
+        SELECT DATE(b.booking_date) AS day, COUNT(*) AS total
+        FROM booking b
+        GROUP BY DATE(b.booking_date)
+        ORDER BY day ASC
+    """)
+    day_labels = [str(r['day']) for r in rows_daily]
+    day_data = [r['total'] for r in rows_daily]
+
+    return render_template(
+        "admin/admin-charts.html",
+        station_labels=station_labels,
+        station_data=station_data,
+        day_labels=day_labels,
+        day_data=day_data
+    )
+
+
+
+@app.route('/api/admin/bookings-per-station')
+def api_bookings_per_station():
+    db = Db()
+    rows = db.select("""
+        SELECT 
+            b.station_id,
+            COALESCE(s.station_name, CONCAT('Unknown Station #', b.station_id)) AS station_name,
+            COUNT(*) AS booking_count
+        FROM booking b
+        LEFT JOIN charging_station_list s ON b.station_id = s.id
+        GROUP BY b.station_id, station_name
+    """)
+    return jsonify({
+        "labels": [r['station_name'] for r in rows],
+        "data": [r['booking_count'] for r in rows]
+    })
+
+
+@app.route('/api/admin/bookings-per-day')
+def api_bookings_per_day():
+    if session.get('user_type') != 'admin':
+        return jsonify({'error': 'unauthorized'}), 401
+
+    db = Db()
+    rows = db.select("""
+        SELECT DATE(Booking_date) AS day, COUNT(*) AS total
+        FROM booking
+        WHERE Booking_date IS NOT NULL
+        GROUP BY DATE(Booking_date)
+        ORDER BY day ASC
+    """)
+    labels = [str(r['day']) for r in rows]
+    data = [r['total'] for r in rows]
+    return jsonify({'labels': labels, 'data': data})
+
+# ------------------- Manage Stations (Admin) -------------------
+
+@app.route('/Manage_station')
+def manage_station():
+    if session.get('user_type') != 'admin':
+        return redirect('/')
+
+    db = Db()
+    stations = db.select("""
+        SELECT id, station_name, address, city, charger_type, available_ports, status
+        FROM charging_station_list
+        ORDER BY id DESC
+    """)
+
+    return render_template('admin/Manage_station.html', stations=stations)
+
+
+
+@app.route('/add-station', methods=['POST'])
+def add_station():
+    if session.get('user_type') != 'admin':
+        return redirect('/')
+
+    name = request.form['station_name']
+    address = request.form.get('address')  # optional
+    city = request.form['city']
+    charger_type = request.form['charger_type']
+    slots = request.form['available_ports']
+    status = request.form['status']
+    latitude = request.form.get('latitude')   # optional
+    longitude = request.form.get('longitude') # optional
+
+    db = Db()
+    db.insert("""
+        INSERT INTO charging_station_list 
+        (station_name, address, city, charger_type, available_ports, status, latitude, longitude)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """, (name, address, city, charger_type, slots, status, latitude, longitude))
+
+    flash("Station added successfully!", "success")
+    return redirect('/Manage_station')
+
+
+
+
+
+
+@app.route('/edit-station/<int:id>', methods=['POST'])
+def edit_station(id):
+    if session.get('user_type') == 'admin':
+        name = request.form['station_name']
+        address = request.form['address']
+        city = request.form['city']
+        charger_type = request.form['charger_type']
+        slots = request.form['available_ports']
+        status = request.form['status']
+
+        print("Editing station:", id, name, address, city, charger_type, slots, status)  # ✅ Debug print
+
+        db = Db()
+        db.update("""
+            UPDATE charging_station_list
+            SET station_name=%s, address=%s, city=%s, charger_type=%s, available_ports=%s, status=%s
+            WHERE id=%s
+        """, (name, address, city, charger_type, slots, status, id))
+
+        flash("Station updated successfully!", "success")
+        return redirect('/Manage_station')
+    return redirect('/')
+
+
+
+@app.route('/delete-station/<int:id>', methods=['POST'])
+def delete_station(id):
+    if session.get('user_type') == 'admin':
+        db = Db()
+        db.delete("DELETE FROM charging_station_list WHERE id=%s", (id,))
+        flash("Station deleted successfully!", "success")
+        return redirect('/Manage_station')
+    return redirect('/')
+
+
+@app.route('/update-booking-status/<int:booking_id>', methods=['POST'])
+def update_booking_status(booking_id):
+    if session.get('user_type') == 'admin':
+        status = request.form['status']
+        db = Db()
+        db.update("UPDATE booking SET status=%s WHERE Booking_id=%s", (status, booking_id))
+        return redirect('/view_booking')
+    return redirect('/')
+
+@app.route('/admin-settings', methods=['GET', 'POST'])
+def admin_settings():
+    if session.get('user_type') != 'admin':
+        return redirect('/')
+
+    db = Db()
+
+    if request.method == 'POST':
+        heading = request.form.get('heading', '').strip()
+        subheading = request.form.get('subheading', '').strip()
+        image = request.files.get('image')
+
+        # Update with optional image
+        if image and image.filename:
+            # Save in /static/images
+            image.save(os.path.join('static', 'images', image.filename))
+            image_path = f"images/{image.filename}"
+            db.update(
+                "UPDATE homepage_settings SET heading_text=%s, subheading_text=%s, background_image=%s WHERE id=1",
+                (heading, subheading, image_path)
+            )
+        else:
+            db.update(
+                "UPDATE homepage_settings SET heading_text=%s, subheading_text=%s WHERE id=1",
+                (heading, subheading)
+            )
+
+        # After save, reload page
+        return redirect(url_for('admin_settings'))
+
+    # GET: load settings
+    settings = db.selectOne("SELECT * FROM homepage_settings LIMIT 1")
+    return render_template('admin/admin-settings.html', settings=settings)
+
+
+@app.route('/find-charger')
+def find_charger():
+    return render_template('find_charger.html')
+
+@app.route('/location')
+def location():
+    return render_template('location.html')
+
+@app.route('/map-view')
+def map_view():
+    db = Db()
+    stations = db.select("""
+        SELECT id, station_name, city, latitude, longitude, available_ports, charger_type
+        FROM charging_station_list
+        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+    """)
+    return render_template('user/map_view.html', stations=stations)
+
+
+
+@app.route('/cancel-booking/<int:booking_id>')
+def cancel_booking(booking_id):
+    db = Db()
+
+    # Update booking status
+    db.update("UPDATE booking SET Status = 'Cancelled' WHERE booking_id = %s", (booking_id,))
+
+    # Restore slot availability
+    booking = db.selectOne("SELECT station_id FROM booking WHERE booking_id = %s", (booking_id,))
+    if booking:
+        db.update("UPDATE charging_station_list SET available_ports = available_ports + 1 WHERE id = %s", (booking['station_id'],))
+
+    return redirect(url_for('user_dashboard'))
+
+
+# ---------------- USER PANEL EXTRA ROUTES ----------------
+
+@app.route('/book-slot')
+def book_slot_page():
+    if session.get('user_type') != 'user':
+        return redirect('/login')
+    db = Db()
+    stations = db.select("SELECT id, station_name, city FROM charging_station_list")
+    return render_template('user/booking_form.html', stations=stations, username=session.get('username', 'User'))
+
+
+@app.route('/support', methods=['GET', 'POST'])
+def support_page():
+    if session.get('user_type') != 'user':
+        return redirect('/login')
+    if request.method == 'POST':
+        subject = request.form['subject']
+        message = request.form['message']
+        db = Db()
+        db.insert("INSERT INTO support_requests (login_id, subject, message, created_at) VALUES (%s, %s, %s, NOW())",
+                  (session['uid'], subject, message))
+        flash("Support request submitted successfully!", "success")
+        return redirect('/support')
+    return render_template('user/support.html', username=session.get('username', 'User'))
+
+# ---------------- USER DASHBOARD ----------------
+@app.route('/user-dashboard')
+def user_dashboard():
+    if session.get('user_type') != 'user':
+        return redirect('/login')
+
+    db = Db()
+    uid = session['uid']
+
+    # Summary counts
+    total_bookings = db.selectOne("SELECT COUNT(*) AS c FROM booking WHERE login_id=%s", (uid,))['c']
+    upcoming_count = db.selectOne("SELECT COUNT(*) AS c FROM booking WHERE login_id=%s AND Status='Upcoming'", (uid,))['c']
+    completed_count = db.selectOne("SELECT COUNT(*) AS c FROM booking WHERE login_id=%s AND Status='Completed'", (uid,))['c']
+    cancelled_count = db.selectOne("SELECT COUNT(*) AS c FROM booking WHERE login_id=%s AND Status='Cancelled'", (uid,))['c']
+
+    # Upcoming bookings preview
+    upcoming_bookings = db.select("""
+        SELECT b.Booking_date, b.Time_from, b.Time_to,
+               b.Status, b.charger_type, s.city, s.station_name
+        FROM booking b
+        JOIN charging_station_list s ON b.station_id = s.id
+        WHERE b.login_id=%s AND b.Status='Upcoming'
+        ORDER BY b.Booking_date ASC
+        LIMIT 5
+    """, (uid,))
+
+    return render_template(
+        'user/user_dashboard.html',
+        username=session.get('username', 'User'),
+        total_bookings=total_bookings,
+        upcoming_count=upcoming_count,
+        completed_count=completed_count,
+        cancelled_count=cancelled_count,
+        upcoming_bookings=upcoming_bookings
+    )
+
+
+@app.route('/user/profile', methods=['GET', 'POST'])
+def user_profile_page():
+    if session.get('user_type') != 'user':
+        return redirect('/login')
+
+    db = Db()
+    user = db.selectOne("SELECT * FROM login WHERE login_id=%s", (session['uid'],))
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        password = request.form.get('password')
+
+        db.update("UPDATE login SET username=%s WHERE login_id=%s", (name, session['uid']))
+        if password:
+            db.update("UPDATE login SET password=%s WHERE login_id=%s", (password, session['uid']))
+
+        flash("Profile updated successfully!", "success")
+        return redirect('/user/profile')
+
+    # ✅ fixed template name
+    return render_template('user/user_profile.html', user=user)
+
+
+@app.route('/booking-history')
+def booking_history_page():
+    if session.get('user_type') != 'user':
+        return redirect('/login')
+
+    db = Db()
+    uid = session['uid']
+
+    bookings = db.select("""
+        SELECT b.booking_id, b.Booking_date, b.Time_from, b.Time_to,
+               b.Status, b.charger_type, s.city, s.station_name
+        FROM booking b
+        JOIN charging_station_list s ON b.station_id = s.id
+        WHERE b.login_id=%s
+        ORDER BY b.Booking_date DESC
+    """, (uid,))
+
+    return render_template('user/user-login-dashboard.html', bookings=bookings)
+
+@app.route('/user/payment')
+def payment_preview():
+    return render_template('user/payment.html', current_page='payment_methods')
 
 
 

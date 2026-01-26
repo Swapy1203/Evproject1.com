@@ -1,0 +1,106 @@
+// admin-charts.js
+
+async function fetchJSON(url, opts = {}) {
+  const { retries = 1, timeout = 8000 } = opts;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const ctrl = new AbortController();
+      const id = setTimeout(() => ctrl.abort(), timeout);
+      const res = await fetch(url, { signal: ctrl.signal, headers: { 'Accept': 'application/json' } });
+      clearTimeout(id);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, 500)); // backoff
+    }
+  }
+}
+
+function ensureCanvas(id) {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Canvas not found: ${id}`);
+  return el.getContext('2d');
+}
+
+function showEmptyState(canvasId, message) {
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  const parent = el.closest('.card-body') || el.parentElement;
+  if (!parent) return;
+  const note = document.createElement('div');
+  note.className = 'text-muted small';
+  note.textContent = message;
+  parent.appendChild(note);
+}
+
+function makeChart(ctx, type, labels, data, label, color) {
+  // Guard against undefined or non-array inputs
+  const safeLabels = Array.isArray(labels) ? labels : [];
+  const safeData = Array.isArray(data) ? data : [];
+
+  // Destroy existing chart on this canvas (avoid duplicates)
+  if (ctx.canvas._chartInstance) {
+    ctx.canvas._chartInstance.destroy();
+    ctx.canvas._chartInstance = null;
+  }
+
+  const chart = new Chart(ctx, {
+    type,
+    data: {
+      labels: safeLabels,
+      datasets: [{
+        label,
+        data: safeData,
+        backgroundColor: type === 'line' ? color + '33' : color + '99',
+        borderColor: color,
+        borderWidth: 1,
+        tension: 0.3,
+        fill: type !== 'line'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: type !== 'pie' ? { y: { beginAtZero: true, ticks: { precision: 0 } } } : {}
+    }
+  });
+
+  // Track instance for safe re-rendering
+  ctx.canvas._chartInstance = chart;
+  return chart;
+}
+
+(async function init() {
+  try {
+    // Verify Chart is available
+    if (typeof Chart === 'undefined') {
+      throw new Error('Chart.js not loaded. Include <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>');
+    }
+
+    // Fetch data
+    const [stationResp, dayResp] = await Promise.all([
+      fetchJSON('/api/admin/bookings-per-station', { retries: 1 }),
+      fetchJSON('/api/admin/bookings-per-day', { retries: 1 })
+    ]);
+
+    // Render charts or show empty state
+    const stationCtx = ensureCanvas('chartBookingsPerStation');
+    const dayCtx = ensureCanvas('chartBookingsPerDay');
+
+    if (!stationResp.labels?.length || !stationResp.data?.length) {
+      showEmptyState('chartBookingsPerStation', 'No booking data found for stations.');
+    } else {
+      makeChart(stationCtx, 'bar', stationResp.labels, stationResp.data, 'Bookings', '#0d6efd');
+    }
+
+    if (!dayResp.labels?.length || !dayResp.data?.length) {
+      showEmptyState('chartBookingsPerDay', 'No bookings found for selected dates.');
+    } else {
+      makeChart(dayCtx, 'line', dayResp.labels, dayResp.data, 'Bookings per Day', '#198754');
+    }
+  } catch (err) {
+    console.error('Chart init error:', err);
+  }
+})();

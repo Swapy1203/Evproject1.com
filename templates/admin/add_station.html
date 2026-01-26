@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Charging Station</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    form { max-width: 600px; margin: auto; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; margin-top: 5px; }
+    #map { height: 400px; margin-top: 15px; }
+    button { margin-top: 20px; padding: 10px 15px; background: #28a745; color: #fff; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>Add New Charging Station</h2>
+  <form method="POST" action="/add_station">
+    <label>Station Name</label>
+    <input type="text" name="station_name" required>
+
+    <label>City</label>
+    <input type="text" name="city" required>
+
+    <label>Available Ports</label>
+    <input type="number" name="available_ports" required>
+
+    <label>Charger Type</label>
+    <select name="charger_type" required>
+      <option value="AC Level 1 Charging">AC Level 1 Charging</option>
+      <option value="AC Level 2 Charging">AC Level 2 Charging</option>
+      <option value="DC Fast Charging">DC Fast Charging</option>
+    </select>
+
+    <!-- Hidden lat/lng fields -->
+    <input type="hidden" id="latitude" name="latitude">
+    <input type="hidden" id="longitude" name="longitude">
+
+    <div id="map"></div>
+
+    <button type="submit">Add Station</button>
+  </form>
+
+  <script>
+    function initMap() {
+      var defaultLocation = {lat: 20.5937, lng: 78.9629}; // India center
+      var map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 5,
+        center: defaultLocation
+      });
+
+      var marker = new google.maps.Marker({
+        position: defaultLocation,
+        map: map,
+        draggable: true
+      });
+
+      // Update hidden fields when marker is dragged
+      google.maps.event.addListener(marker, 'dragend', function(event) {
+        document.getElementById('latitude').value = event.latLng.lat();
+        document.getElementById('longitude').value = event.latLng.lng();
+      });
+    }
+  </script>
+
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"></script>
+</body>
+</html>
